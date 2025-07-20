@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>India Cyber Fraud Analytics Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 0;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 2rem;
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .nav {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .nav a {
+            text-decoration: none;
+            color: #333;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .nav a:hover {
+            color: #667eea;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+
+        .filters {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+
+        .filter-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .filter-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .filter-item label {
+            font-weight: 600;
+            color: #555;
+        }
+
+        .filter-item select {
+            padding: 0.75rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            background: white;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .filter-item select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+        }
+
+        .card h3 {
+            margin-bottom: 1rem;
+            color: #333;
+            font-size: 1.3rem;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+
+        .large-chart {
+            grid-column: 1 / -1;
+        }
+
+        .large-chart .chart-container {
+            height: 400px;
+        }
+
+        .map-container {
+            height: 400px;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Custom map popup styles */
+        .leaflet-popup-content-wrapper {
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .leaflet-popup-content {
+            margin: 0;
+            line-height: 1.4;
+        }
+
+        /* Map legend styles */
+        .map-legend {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 1rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 10px;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .table-container {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .data-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+
+        .data-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .nav {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .container {
+                padding: 0 1rem;
+            }
+
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+
+            .large-chart {
+                grid-column: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">CyberFraud Analytics</div>
+            <nav class="nav">
+                <a href="#overview">Overview</a>
+                <a href="#trends">Trends</a>
+                <a href="#states">States</a>
+                <a href="#types">Types</a>
+                <a href="#map">Map</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="filters">
+            <div class="filter-group">
+                <div class="filter-item">
+                    <label for="yearFilter">Year Filter</label>
+                    <select id="yearFilter">
+                        <option value="">All Years</option>
+                        <option value="2018">2018</option>
+                        <option value="2019">2019</option>
+                        <option value="2020">2020</option>
+                        <option value="2021">2021</option>
+                        <option value="2022">2022</option>
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <label for="stateFilter">State Filter</label>
+                    <select id="stateFilter">
+                        <option value="">All States</option>
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <label for="fraudTypeFilter">Fraud Type Filter</label>
+                    <select id="fraudTypeFilter">
+                        <option value="">All Types</option>
+                        <option value="A">Credit/Debit Card Fraud</option>
+                        <option value="B">ATM Fraud</option>
+                        <option value="C">Online Banking Fraud</option>
+                        <option value="D">OTP Fraud</option>
+                        <option value="E">Other Types</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard">
+            <div class="card large-chart" id="overview">
+                <h3>📊 Overview Statistics</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="totalCases">-</div>
+                        <div class="stat-label">Total Cases</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="activeStates">-</div>
+                        <div class="stat-label">Active States</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="peakYear">-</div>
+                        <div class="stat-label">Peak Year</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="avgCases">-</div>
+                        <div class="stat-label">Avg Cases/State</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card large-chart" id="trends">
+                <h3>📈 Year-wise Cyber Fraud Trends</h3>
+                <div class="chart-container">
+                    <canvas id="yearlyTrendChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card" id="states">
+                <h3>🏛️ Top 10 States by Cases</h3>
+                <div class="chart-container">
+                    <canvas id="stateChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card" id="types">
+                <h3>🔍 Fraud Types Distribution</h3>
+                <div class="chart-container">
+                    <canvas id="fraudTypeChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>🏆 Top 5 Most Affected States</h3>
+                <div class="table-container">
+                    <table class="data-table" id="topStatesTable">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>State</th>
+                                <th>Total Cases</th>
+                                <th>Most Common Type</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>📊 Yearly Comparison</h3>
+                <div class="chart-container">
+                    <canvas id="yearComparisonChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card large-chart" id="map">
+                <h3>🗺️ Geographic Distribution</h3>
+                <div class="map-container" id="mapContainer">
+                    <div class="loading">Loading map...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let fraudData = [];
+        let filteredData = [];
+        let charts = {};
+
+        // CSV data (embedded)
+        const csvData = `Sl. No.,State/UT,2018 - A,2018 - B,2018 - C,2018 - D,2018 - E,2019 - A,2019 - B,2019 - C,2019 - D,2019 - E,2020 - A,2020 - B,2020 - C,2020 - D,2020 - E,2021 - A,2021 - B,2021 - C,2021 - D,2021 - E,2022 - A,2022 - B,2022 - C,2022 - D,2022 - E
+1,Andhra Pradesh,9,50,48,67,21,4,68,356,108,167,37,54,409,140,124,39,62,524,141,186,39,30,569,61,285
+2,Arunachal Pradesh,0,0,0,0,0,0,0,0,0,0,0,0,2,0,1,0,0,2,0,0,0,0,0,0,0
+3,Assam,0,2,1,3,0,0,0,25,0,58,0,10,48,0,0,0,5,1,0,76,0,8,8,0,0
+4,Bihar,5,333,15,0,4,24,792,24,20,148,493,642,105,8,46,380,775,117,23,78,562,638,168,10,63
+5,Chhattisgarh,0,4,12,1,1,0,8,4,7,16,4,2,28,23,14,2,5,11,12,37,2,2,29,4,5
+6,Goa,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1,0,2,4,0,5
+7,Gujarat,10,50,44,21,14,19,13,33,28,14,10,63,74,27,31,45,28,58,33,44,5,13,71,11,8
+8,Haryana,0,0,0,0,0,0,38,51,0,18,0,0,26,0,10,0,0,3,0,49,1,0,8,0,35
+9,Himachal Pradesh,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,4,1,1,0,1,8,0,0
+10,Jharkhand,8,115,52,0,0,0,13,0,5,0,9,21,51,0,2,2,25,18,34,2,2,4,88,4,0
+11,Karnataka,0,0,0,43,6,0,3,4,0,0,0,0,0,0,0,0,0,0,0,6,0,0,0,0,0
+12,Kerala,0,3,5,5,1,4,0,6,2,2,0,3,1,0,2,1,2,3,0,10,1,2,21,2,0
+13,Madhya Pradesh,0,15,8,2,18,0,6,6,1,12,4,10,20,2,33,2,12,48,9,18,6,5,99,43,27
+14,Maharashtra,143,304,328,82,179,159,454,552,131,385,180,324,821,229,478,162,104,624,149,639,275,144,909,195,679
+15,Manipur,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+16,Meghalaya,0,0,0,0,0,0,0,0,0,0,0,0,9,0,1,0,0,0,0,0,0,0,0,0,0
+17,Mizoram,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+18,Nagaland,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+19,Odisha,13,204,158,0,17,50,331,545,1,29,132,362,549,0,36,166,217,687,129,6,147,113,434,201,62
+20,Punjab,0,2,3,0,2,2,14,10,0,9,3,2,5,1,5,1,1,5,2,20,4,6,17,11,23
+21,Rajasthan,11,8,7,9,37,6,73,126,36,83,12,117,49,45,109,20,76,148,76,51,5,55,109,18,105
+22,Sikkim,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+23,Tamil Nadu,0,0,0,0,5,0,0,3,1,7,2,1,0,1,1,8,16,54,15,14,8,12,163,19,49
+24,Telangana,32,42,140,46,87,31,50,35,134,32,252,315,1405,525,819,703,443,2180,1377,2300,535,624,3223,2179,3020
+25,Tripura,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+26,Uttar Pradesh,78,135,132,35,74,66,202,306,75,164,47,203,358,89,140,87,93,329,27,78,68,10,483,34,171
+27,Uttarakhand,0,11,12,5,0,0,1,0,0,2,0,0,0,0,1,0,0,0,0,0,0,0,1,27,3
+28,West Bengal,0,0,0,0,4,0,0,0,0,0,7,31,68,1,38,6,34,0,0,0,0,0,0,0,30
+29,Andaman and Nicobar Islands,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+30,Chandigarh,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2
+31,Dadra and Nagar Haveli and Daman and Diu,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+32,Delhi,0,2,0,0,1,2,1,2,0,6,1,0,19,2,9,2,0,0,0,17,5,21,72,91,142
+33,Jammu and Kashmir,0,2,0,0,1,0,0,5,0,1,0,0,0,0,0,0,1,7,0,0,0,0,7,0,0
+34,Ladakh,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+35,Lakshadweep,0,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+36,Puducherry,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0`;
+
+        // Parse CSV data
+        function parseCSV(csv) {
+            const lines = csv.trim().split('\n');
+            const headers = lines[0].split(',');
+            const data = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                const values = lines[i].split(',');
+                const row = {};
+                
+                headers.forEach((header, index) => {
+                    row[header.trim()] = values[index] ? values[index].trim() : '0';
+                });
+                
+                data.push(row);
+            }
+            
+            return data;
+        }
+
+        // Initialize data
+        function initializeData() {
+            fraudData = parseCSV(csvData);
+            filteredData = [...fraudData];
+            
+            // Populate state filter
+            const stateFilter = document.getElementById('stateFilter');
+            const states = [...new Set(fraudData.map(d => d['State/UT']))].sort();
+            states.forEach(state => {
+                const option = document.createElement('option');
+                option.value = state;
+                option.textContent = state;
+                stateFilter.appendChild(option);
+            });
+        }
+
+        // Apply filters
+        function applyFilters() {
+            const yearFilter = document.getElementById('yearFilter').value;
+            const stateFilter = document.getElementById('stateFilter').value;
+            const fraudTypeFilter = document.getElementById('fraudTypeFilter').value;
+
+            filteredData = fraudData.filter(row => {
+                if (stateFilter && row['State/UT'] !== stateFilter) return false;
+                return true;
+            });
+
+            updateAllCharts();
+            updateStatistics();
+            updateTopStatesTable();
+        }
+
+        // Get total cases for a state across all years
+        function getTotalCases(stateData, fraudType = '') {
+            let total = 0;
+            const years = ['2018', '2019', '2020', '2021', '2022'];
+            const types = fraudType ? [fraudType] : ['A', 'B', 'C', 'D', 'E'];
+            
+            years.forEach(year => {
+                types.forEach(type => {
+                    const key = `${year} - ${type}`;
+                    const value = parseInt(stateData[key]) || 0;
+                    if (value !== 'NA' && !isNaN(value)) {
+                        total += value;
+                    }
+                });
+            });
+            
+            return total;
+        }
+
+        // Get yearly totals
+        function getYearlyTotals() {
+            const years = ['2018', '2019', '2020', '2021', '2022'];
+            const yearlyData = {};
+            
+            years.forEach(year => {
+                yearlyData[year] = 0;
+                filteredData.forEach(row => {
+                    ['A', 'B', 'C', 'D', 'E'].forEach(type => {
+                        const key = `${year} - ${type}`;
+                        const value = parseInt(row[key]) || 0;
+                        if (!isNaN(value)) {
+                            yearlyData[year] += value;
+                        }
+                    });
+                });
+            });
+            
+            return yearlyData;
+        }
+
+        // Get fraud type totals
+        function getFraudTypeTotals() {
+            const types = {
+                'A': 'Credit/Debit Card Fraud',
+                'B': 'ATM Fraud', 
+                'C': 'Online Banking Fraud',
+                'D': 'OTP Fraud',
+                'E': 'Other Types'
+            };
+            
+            const typeTotals = {};
+            
+            Object.keys(types).forEach(type => {
+                typeTotals[types[type]] = 0;
+                const years = ['2018', '2019', '2020', '2021', '2022'];
+                
+                years.forEach(year => {
+                    filteredData.forEach(row => {
+                        const key = `${year} - ${type}`;
+                        const value = parseInt(row[key]) || 0;
+                        if (!isNaN(value)) {
+                            typeTotals[types[type]] += value;
+                        }
+                    });
+                });
+            });
+            
+            return typeTotals;
+        }
+
+        // Update statistics
+        function updateStatistics() {
+            const totalCases = filteredData.reduce((sum, row) => sum + getTotalCases(row), 0);
+            const activeStates = filteredData.filter(row => getTotalCases(row) > 0).length;
+            
+            const yearlyTotals = getYearlyTotals();
+            const peakYear = Object.keys(yearlyTotals).reduce((a, b) => 
+                yearlyTotals[a] > yearlyTotals[b] ? a : b
+            );
+            
+            const avgCases = activeStates > 0 ? Math.round(totalCases / activeStates) : 0;
+
+            document.getElementById('totalCases').textContent = totalCases.toLocaleString();
+            document.getElementById('activeStates').textContent = activeStates;
+            document.getElementById('peakYear').textContent = peakYear;
+            document.getElementById('avgCases').textContent = avgCases.toLocaleString();
+        }
+
+        // Create yearly trend chart
+        function createYearlyTrendChart() {
+            const ctx = document.getElementById('yearlyTrendChart').getContext('2d');
+            const yearlyTotals = getYearlyTotals();
+            
+            if (charts.yearlyTrend) {
+                charts.yearlyTrend.destroy();
+            }
+
+            charts.yearlyTrend = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Object.keys(yearlyTotals),
+                    datasets: [{
+                        label: 'Total Cases',
+                        data: Object.values(yearlyTotals),
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(0,0,0,0.1)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(0,0,0,0.1)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Create state chart
+        function createStateChart() {
+            const ctx = document.getElementById('stateChart').getContext('2d');
+            
+            const stateTotals = filteredData.map(row => ({
+                state: row['State/UT'],
+                total: getTotalCases(row)
+            })).filter(item => item.total > 0)
+              .sort((a, b) => b.total - a.total)
+              .slice(0, 10);
+
+            if (charts.state) {
+                charts.state.destroy();
+            }
+
+            charts.state = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: stateTotals.map(item => item.state),
+                    datasets: [{
+                        label: 'Total Cases',
+                        data: stateTotals.map(item => item.total),
+                        backgroundColor: 'rgba(102, 126, 234, 0.8)',
+                        borderColor: '#667eea',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        },
+                        x: {
+                            ticks: {
+                                maxRotation: 45
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Create fraud type chart
+        function createFraudTypeChart() {
+            const ctx = document.getElementById('fraudTypeChart').getContext('2d');
+            const typeTotals = getFraudTypeTotals();
+
+            if (charts.fraudType) {
+                charts.fraudType.destroy();
+            }
+
+            charts.fraudType = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(typeTotals),
+                    datasets: [{
+                        data: Object.values(typeTotals),
+                        backgroundColor: [
+                            '#667eea',
+                            '#764ba2',
+                            '#f093fb',
+                            '#f5576c',
+                            '#4facfe'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Create year comparison chart
+        function createYearComparisonChart() {
+            const ctx = document.getElementById('yearComparisonChart').getContext('2d');
+            const years = ['2018', '2019', '2020', '2021', '2022'];
+            const types = ['A', 'B', 'C', 'D', 'E'];
+            const typeLabels = {
+                'A': 'Card Fraud',
+                'B': 'ATM Fraud',
+                'C': 'Banking Fraud',
+                'D': 'OTP Fraud',
+                'E': 'Other'
+            };
+
+            const datasets = types.map((type, index) => {
+                const data = years.map(year => {
+                    return filteredData.reduce((sum, row) => {
+                        const value = parseInt(row[`${year} - ${type}`]) || 0;
+                        return sum + (isNaN(value) ? 0 : value);
+                    }, 0);
+                });
+
+                return {
+                    label: typeLabels[type],
+                    data: data,
+                    backgroundColor: [
+                        '#667eea',
+                        '#764ba2',
+                        '#f093fb',
+                        '#f5576c',
+                        '#4facfe'
+                    ][index],
+                    borderWidth: 0
+                };
+            });
+
+            if (charts.yearComparison) {
+                charts.yearComparison.destroy();
+            }
+
+            charts.yearComparison = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: years,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            stacked: true
+                        },
+                        y: {
+                            stacked: true,
+                            beginAtZero: true
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update top states table
+        function updateTopStatesTable() {
+            const stateTotals = filteredData.map(row => {
+                const total = getTotalCases(row);
+                const types = ['A', 'B', 'C', 'D', 'E'];
+                const typeLabels = {
+                    'A': 'Card Fraud',
+                    'B': 'ATM Fraud',
+                    'C': 'Banking Fraud',
+                    'D': 'OTP Fraud',
+                    'E': 'Other'
+                };
+                
+                let maxType = 'A';
+                let maxValue = 0;
+                
+                types.forEach(type => {
+                    const typeTotal = getTotalCases(row, type);
+                    if (typeTotal > maxValue) {
+                        maxValue = typeTotal;
+                        maxType = type;
+                    }
+                });
+
+                return {
+                    state: row['State/UT'],
+                    total: total,
+                    mostCommon: typeLabels[maxType]
+                };
+            }).filter(item => item.total > 0)
+              .sort((a, b) => b.total - a.total)
+              .slice(0, 5);
+
+            const tbody = document.querySelector('#topStatesTable tbody');
+            tbody.innerHTML = '';
+
+            stateTotals.forEach((item, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${item.state}</td>
+                    <td>${item.total.toLocaleString()}</td>
+                    <td>${item.mostCommon}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Global map variable
+        let indiaMap = null;
+        let mapMarkers = [];
+
+        // Initialize map
+        function initializeMap() {
+            const mapContainer = document.getElementById('mapContainer');
+            
+            try {
+                // Clear existing map if it exists
+                if (indiaMap) {
+                    indiaMap.remove();
+                    indiaMap = null;
+                }
+                
+                // Clear markers array
+                mapMarkers = [];
+                
+                // Reset map container
+                mapContainer.innerHTML = '<div id="mapView" style="height: 100%; width: 100%; border-radius: 10px;"></div>';
+                
+                // Small delay to ensure DOM is ready
+                setTimeout(() => {
+                    try {
+                        // Initialize Leaflet map with OpenStreetMap tiles
+                        indiaMap = L.map('mapView', {
+                            center: [20.5937, 78.9629],
+                            zoom: 5,
+                            zoomControl: true,
+                            scrollWheelZoom: true,
+                            doubleClickZoom: true,
+                            boxZoom: true,
+                            keyboard: true,
+                            dragging: true,
+                            touchZoom: true
+                        });
+
+                        // Add OpenStreetMap tile layer
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                            attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a> contributors',
+                            maxZoom: 18,
+                            tileSize: 256,
+                            zoomOffset: 0
+                        }).addTo(indiaMap);
+
+                        // State coordinates (approximate centers)
+                        const stateCoordinates = {
+                            'Andhra Pradesh': [15.9129, 79.7400],
+                            'Arunachal Pradesh': [28.2180, 94.7278],
+                            'Assam': [26.2006, 92.9376],
+                            'Bihar': [25.0961, 85.3131],
+                            'Chhattisgarh': [21.2787, 81.8661],
+                            'Goa': [15.2993, 74.1240],
+                            'Gujarat': [23.0225, 72.5714],
+                            'Haryana': [29.0588, 76.0856],
+                            'Himachal Pradesh': [31.1048, 77.1734],
+                            'Jharkhand': [23.6102, 85.2799],
+                            'Karnataka': [15.3173, 75.7139],
+                            'Kerala': [10.8505, 76.2711],
+                            'Madhya Pradesh': [22.9734, 78.6569],
+                            'Maharashtra': [19.7515, 75.7139],
+                            'Manipur': [24.6637, 93.9063],
+                            'Meghalaya': [25.4670, 91.3662],
+                            'Mizoram': [23.1645, 92.9376],
+                            'Nagaland': [26.1584, 94.5624],
+                            'Odisha': [20.9517, 85.0985],
+                            'Punjab': [31.1471, 75.3412],
+                            'Rajasthan': [27.0238, 74.2179],
+                            'Sikkim': [27.5330, 88.5122],
+                            'Tamil Nadu': [11.1271, 78.6569],
+                            'Telangana': [18.1124, 79.0193],
+                            'Tripura': [23.9408, 91.9882],
+                            'Uttar Pradesh': [26.8467, 80.9462],
+                            'Uttarakhand': [30.0668, 79.0193],
+                            'West Bengal': [22.9868, 87.8550],
+                            'Andaman and Nicobar Islands': [11.7401, 92.6586],
+                            'Chandigarh': [30.7333, 76.7794],
+                            'Dadra and Nagar Haveli and Daman and Diu': [20.1809, 73.0169],
+                            'Delhi': [28.7041, 77.1025],
+                            'Jammu and Kashmir': [34.0837, 74.7973],
+                            'Ladakh': [34.1526, 77.5771],
+                            'Lakshadweep': [10.5667, 72.6417],
+                            'Puducherry': [11.9416, 79.8083]
+                        };
+
+                        // Calculate max cases for scaling
+                        const maxCases = Math.max(...filteredData.map(r => getTotalCases(r)));
+                        
+                        // Add markers for states with fraud cases
+                        filteredData.forEach(row => {
+                            const stateName = row['State/UT'];
+                            const totalCases = getTotalCases(row);
+                            
+                            if (totalCases > 0 && stateCoordinates[stateName]) {
+                                const coords = stateCoordinates[stateName];
+                                
+                                // Calculate marker size based on cases (5-30 pixel radius)
+                                const markerSize = Math.max(8, Math.min(30, (totalCases / maxCases) * 25 + 8));
+                                
+                                // Color coding based on case volume
+                                let markerColor = '#667eea'; // Default blue
+                                if (totalCases > 2000) markerColor = '#f5576c'; // Red for very high
+                                else if (totalCases > 1000) markerColor = '#f093fb'; // Pink for high  
+                                else if (totalCases > 500) markerColor = '#764ba2'; // Purple for medium
+                                
+                                const marker = L.circleMarker(coords, {
+                                    radius: markerSize,
+                                    fillColor: markerColor,
+                                    color: '#ffffff',
+                                    weight: 2,
+                                    opacity: 1,
+                                    fillOpacity: 0.8
+                                }).addTo(indiaMap);
+
+                                // Create detailed popup content
+                                const fraudTypes = ['A', 'B', 'C', 'D', 'E'];
+                                const fraudLabels = {
+                                    'A': 'Card Fraud',
+                                    'B': 'ATM Fraud',
+                                    'C': 'Banking Fraud', 
+                                    'D': 'OTP Fraud',
+                                    'E': 'Other Types'
+                                };
+                                
+                                let popupContent = `
+                                    <div style="font-family: Arial, sans-serif; min-width: 200px;">
+                                        <h4 style="margin: 0 0 10px 0; color: #333; border-bottom: 2px solid ${markerColor}; padding-bottom: 5px;">
+                                            ${stateName}
+                                        </h4>
+                                        <p style="margin: 5px 0; font-weight: bold; font-size: 16px;">
+                                            📊 Total Cases: <span style="color: ${markerColor};">${totalCases.toLocaleString()}</span>
+                                        </p>
+                                        <div style="margin-top: 10px;">
+                                            <strong>Breakdown by Type:</strong><br>
+                                `;
+                                
+                                fraudTypes.forEach(type => {
+                                    const typeCases = getTotalCases(row, type);
+                                    if (typeCases > 0) {
+                                        popupContent += `
+                                            <div style="margin: 3px 0; font-size: 13px;">
+                                                ${fraudLabels[type]}: ${typeCases.toLocaleString()}
+                                            </div>
+                                        `;
+                                    }
+                                });
+                                
+                                popupContent += `
+                                        </div>
+                                        <div style="margin-top: 10px; font-size: 11px; color: #666;">
+                                            Data from 2018-2022
+                                        </div>
+                                    </div>
+                                `;
+
+                                marker.bindPopup(popupContent, {
+                                    maxWidth: 250,
+                                    className: 'custom-popup'
+                                });
+                                
+                                // Add hover effects
+                                marker.on('mouseover', function() {
+                                    this.setStyle({
+                                        weight: 3,
+                                        opacity: 1,
+                                        fillOpacity: 1
+                                    });
+                                });
+                                
+                                marker.on('mouseout', function() {
+                                    this.setStyle({
+                                        weight: 2,
+                                        opacity: 1,
+                                        fillOpacity: 0.8
+                                    });
+                                });
+
+                                mapMarkers.push(marker);
+                            }
+                        });
+
+                        // Add map legend
+                        const legend = L.control({position: 'bottomright'});
+                        legend.onAdd = function(map) {
+                            const div = L.DomUtil.create('div', 'map-legend');
+                            div.innerHTML = `
+                                <div style="background: rgba(255,255,255,0.95); padding: 10px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+                                    <h5 style="margin: 0 0 8px 0;">Cyber Fraud Cases</h5>
+                                    <div style="display: flex; align-items: center; margin: 3px 0;">
+                                        <div style="width: 12px; height: 12px; background: #f5576c; border-radius: 50%; margin-right: 8px;"></div>
+                                        <span style="font-size: 12px;">> 2000 cases</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; margin: 3px 0;">
+                                        <div style="width: 10px; height: 10px; background: #f093fb; border-radius: 50%; margin-right: 8px;"></div>
+                                        <span style="font-size: 12px;">1000-2000 cases</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; margin: 3px 0;">
+                                        <div style="width: 8px; height: 8px; background: #764ba2; border-radius: 50%; margin-right: 8px;"></div>
+                                        <span style="font-size: 12px;">500-1000 cases</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; margin: 3px 0;">
+                                        <div style="width: 6px; height: 6px; background: #667eea; border-radius: 50%; margin-right: 8px;"></div>
+                                        <span style="font-size: 12px;">< 500 cases</span>
+                                    </div>
+                                </div>
+                            `;
+                            return div;
+                        };
+                        legend.addTo(indiaMap);
+
+                        // Force map to resize properly
+                        setTimeout(() => {
+                            indiaMap.invalidateSize();
+                        }, 100);
+
+                    } catch (mapError) {
+                        console.error('Error creating map:', mapError);
+                        mapContainer.innerHTML = `
+                            <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #666;">
+                                <div style="text-align: center;">
+                                    <div style="font-size: 48px; margin-bottom: 10px;">🗺️</div>
+                                    <div>Map temporarily unavailable</div>
+                                    <div style="font-size: 12px; margin-top: 5px;">Please check your internet connection</div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }, 100);
+                
+            } catch (error) {
+                console.error('Error initializing map:', error);
+                mapContainer.innerHTML = `
+                    <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #666;">
+                        <div style="text-align: center;">
+                            <div style="font-size: 48px; margin-bottom: 10px;">⚠️</div>
+                            <div>Unable to load map</div>
+                            <div style="font-size: 12px; margin-top: 5px;">Map functionality is temporarily unavailable</div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // Update all charts
+        function updateAllCharts() {
+            createYearlyTrendChart();
+            createStateChart();
+            createFraudTypeChart();
+            createYearComparisonChart();
+            
+            // Initialize map with a small delay to ensure DOM is ready
+            setTimeout(() => {
+                initializeMap();
+            }, 200);
+        }
+
+        // Event listeners
+        document.getElementById('yearFilter').addEventListener('change', applyFilters);
+        document.getElementById('stateFilter').addEventListener('change', applyFilters);
+        document.getElementById('fraudTypeFilter').addEventListener('change', applyFilters);
+
+        // Smooth scrolling for navigation
+        document.querySelectorAll('.nav a').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href').substring(1);
+                const targetElement = document.getElementById(targetId);
+                if (targetElement) {
+                    targetElement.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Initialize everything when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeData();
+            updateStatistics();
+            updateTopStatesTable();
+            
+            // Initialize charts
+            createYearlyTrendChart();
+            createStateChart();
+            createFraudTypeChart();
+            createYearComparisonChart();
+            
+            // Initialize map with delay to ensure all resources are loaded
+            setTimeout(() => {
+                initializeMap();
+            }, 1500);
+        });
+
+        // Responsive chart resize
+        window.addEventListener('resize', function() {
+            Object.values(charts).forEach(chart => {
+                if (chart && typeof chart.resize === 'function') {
+                    chart.resize();
+                }
+            });
+        });
+
+        // Add some interactive animations
+        document.querySelectorAll('.card').forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-5px)';
+            });
+            
+            card.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+            });
+        });
+    </script>
+</body>
+</html>
+                
