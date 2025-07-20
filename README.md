@@ -42,7 +42,7 @@ README.md                    # Project documentation
 1. **Clone the Repository**
    \`\`\`bash
    git clone https://github.com/Ronit-paikray/india-cyber-fraud-dashboard.git
-   cd your-repo-name
+   cd india-cyber-fraud-dashboard
    \`\`\`
 
 2. **Open the Dashboard**
